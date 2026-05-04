@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Spaartool" />
+  <title>Spaartool</title>
+
+  <!-- Favicon & apple touch icon (inlined SVG als data URI) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231D9E75'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='36' font-family='system-ui'>💰</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%231D9E75'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='system-ui'>💰</text></svg>" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #1D9E75;
+      --green-dark: #0F6E56;
+      --green-light: #E1F5EE;
+      --red: #E24B4A;
+      --red-light: #FCEBEB;
+      --red-dark: #A32D2D;
+      --bg: #F5F5F0;
+      --card: #FFFFFF;
+      --border: rgba(0,0,0,0.1);
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --text-tertiary: #aaa;
+      --radius: 14px;
+      --radius-sm: 9px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111;
+        --card: #1e1e1e;
+        --border: rgba(255,255,255,0.1);
+        --text: #f0f0f0;
+        --text-secondary: #999;
+        --text-tertiary: #555;
+        --green-light: #0a3326;
+        --red-light: #2d1010;
+        --red-dark: #f09595;
+      }
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-top: calc(var(--safe-top) + 16px);
+      padding-bottom: calc(var(--safe-bottom) + 80px);
+    }
+
+    /* Header */
+    .header {
+      padding: 0 16px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-icon {
+      width: 36px; height: 36px;
+      background: var(--green);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--card);
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      padding-bottom: var(--safe-bottom);
+      z-index: 100;
+    }
+    .nav-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 10px 4px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--text-tertiary);
+      font-size: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn.active { color: var(--green); }
+    .nav-btn svg { width: 24px; height: 24px; stroke-width: 1.8; fill: none; stroke: currentColor; }
+
+    /* Pages */
+    .page { display: none; padding: 0 16px; animation: fadeIn 0.15s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Section title */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 20px 0 8px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 0.5px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .card-inner { padding: 14px 16px; }
+
+    /* Metric grid */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .metric {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .metric-value { font-size: 20px; font-weight: 700; }
+    .metric-main {
+      grid-column: 1 / -1;
+      background: var(--green);
+      border-color: var(--green);
+    }
+    .metric-main .metric-label { color: rgba(255,255,255,0.75); }
+    .metric-main .metric-value { color: #fff; font-size: 28px; }
+
+    /* Progress */
+    .progress-wrap {
+      background: var(--bg);
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+      margin: 8px 0 4px;
+    }
+    .progress-bar {
+      height: 8px;
+      border-radius: 99px;
+      background: var(--green);
+      transition: width 0.4s ease;
+    }
+    .progress-bar.done { background: #639922; }
+
+    /* Goal card */
+    .goal-row {
+      padding: 14px 16px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .goal-row:last-child { border-bottom: none; }
+    .goal-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+    .goal-name { font-weight: 600; font-size: 15px; }
+    .goal-pct { font-size: 13px; color: var(--text-secondary); }
+    .goal-amounts { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+    .goal-deadline { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+    .goal-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    /* Transaction row */
+    .tx-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-icon {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .tx-icon.income { background: var(--green-light); }
+    .tx-icon.expense { background: var(--red-light); }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-desc { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-sub { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+    .tx-right { text-align: right; flex-shrink: 0; }
+    .tx-amount { font-size: 15px; font-weight: 600; }
+    .tx-amount.income { color: var(--green); }
+    .tx-amount.expense { color: var(--red); }
+    .tx-date { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      border: 0.5px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.1s;
+    }
+    .btn:active { opacity: 0.7; }
+    .btn-primary { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn-sm { padding: 7px 12px; font-size: 13px; }
+    .btn-danger { color: var(--red); border-color: var(--red); }
+    .btn-full { width: 100%; }
+
+    /* Form */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      border: 0.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(29,158,117,0.15);
+    }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      display: flex; align-items: flex-end;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 20px 20px calc(20px + var(--safe-bottom));
+      width: 100%;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-title {
+      font-size: 18px; font-weight: 700; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-close { background: none; border: none; font-size: 22px; color: var(--text-secondary); cursor: pointer; line-height: 1; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 32px 16px; color: var(--text-tertiary); font-size: 14px; }
+    .empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+    /* Badge */
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 99px; font-size: 11px; font-weight: 600;
+    }
+    .badge-income { background: var(--green-light); color: var(--green-dark); }
+    .badge-expense { background: var(--red-light); color: var(--red-dark); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: calc(80px + var(--safe-bottom) + 10px); left: 50%; transform: translateX(-50%);
+      background: #222; color: #fff; padding: 10px 20px;
+      border-radius: 99px; font-size: 14px; z-index: 300;
+      opacity: 0; transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-icon">💰</div>
+    <h1>Spaartool</h1>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="metric-grid" id="metrics"></div>
+    <p class="section-title">Spaardoelen</p>
+    <div class="card" id="dash-goals"></div>
+    <p class="section-title">Recente transacties</p>
+    <div class="card" id="dash-tx"></div>
+  </div>
+
+  <!-- DOELEN -->
+  <div id="page-goals" class="page">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-goal')">+ Nieuw doel</button>
+    </div>
+    <div class="card" id="goals-list"></div>
+  </div>
+
+  <!-- TRANSACTIES -->
+  <div id="page-transactions" class="page">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-tx')">+ Transactie</button>
+    </div>
+    <div class="card" id="tx-list"></div>
+  </div>
+
+  <!-- STATISTIEKEN -->
+  <div id="page-stats" class="page">
+    <p class="section-title">Deze maand</p>
+    <div class="card" id="stats-month"></div>
+    <p class="section-title">Per categorie (uitgaven)</p>
+    <div class="card" id="stats-cats"></div>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="showPage('dashboard',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </button>
+  <button class="nav-btn" onclick="showPage('goals',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+    Doelen
+  </button>
+  <button class="nav-btn" onclick="showPage('transactions',this)">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 5 19 12"/><line x1="5" y1="19" x2="19" y2="19"/></svg>
+    Transacties
+  </button>
+  <button class="nav-btn" onclick="showPage('stats',this)">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Statistieken
+  </button>
+</nav>
+
+<!-- MODAL: Nieuw doel -->
+<div class="modal-overlay hidden" id="modal-goal" onclick="closeModal('modal-goal',event)">
+  <div class="modal">
+    <div class="modal-title">Nieuw spaardoel <button class="modal-close" onclick="closeModal('modal-goal')">×</button></div>
+    <div class="form-group"><label>Naam</label><input id="g-name" placeholder="Bijv. Vakantie Italië" /></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Doelbedrag (€)</label><input id="g-target" type="number" min="1" step="0.01" placeholder="1500" inputmode="decimal" /></div>
+      <div class="form-group"><label>Al gespaard (€)</label><input id="g-saved" type="number" min="0" step="0.01" placeholder="0" inputmode="decimal" /></div>
+    </div>
+    <div class="form-group"><label>Deadline (optioneel)</label><input id="g-date" type="date" /></div>
+    <button class="btn btn-primary btn-full" onclick="addGoal()">Doel opslaan</button>
+  </div>
+</div>
+
+<!-- MODAL: Storten -->
+<div class="modal-overlay hidden" id="modal-deposit" onclick="closeModal('modal-deposit',event)">
+  <div class="modal">
+    <div class="modal-title">Storten <button class="modal-close" onclick="closeModal('modal-deposit')">×</button></div>
+    <input type="hidden" id="deposit-id" />
+    <div class="form-group"><label>Bedrag (€)</label><input id="deposit-amount" type="number" min="0.01" step="0.01" placeholder="50" inputmode="decimal" /></div>
+    <button class="btn btn-primary btn-full" onclick="confirmDeposit()">Storten</button>
+  </div>
+</div>
+
+<!-- MODAL: Transactie -->
+<div class="modal-overlay hidden" id="modal-tx" onclick="closeModal('modal-tx',event)">
+  <div class="modal">
+    <div class="modal-title">Transactie <button class="modal-close" onclick="closeModal('modal-tx')">×</button></div>
+    <div class="form-group"><label>Omschrijving</label><input id="t-desc" placeholder="Bijv. Salaris mei" /></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Bedrag (€)</label><input id="t-amount" type="number" min="0.01" step="0.01" placeholder="500" inputmode="decimal" /></div>
+      <div class="form-group"><label>Type</label>
+        <select id="t-type">
+          <option value="income">Inkomst</option>
+          <option value="expense">Uitgave</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Categorie</label>
+        <select id="t-cat">
+          <option>Salaris</option><option>Huur</option><option>Boodschappen</option>
+          <option>Transport</option><option>Vrije tijd</option><option>Gezondheidszorg</option>
+          <option>Sparen</option><option>Overig</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Datum</label><input id="t-date" type="date" /></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addTransaction()">Opslaan</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CAT_ICONS = {Salaris:'💼',Huur:'🏠',Boodschappen:'🛒',Transport:'🚗',
+  'Vrije tijd':'🎉',Gezondheidszorg:'❤️',Sparen:'🏦',Overig:'📦'};
+
+let state = { goals: [], transactions: [] };
+
+function save() {
+  try { localStorage.setItem('spaartool-v1', JSON.stringify(state)); } catch(e) {}
+}
+function load() {
+  try {
+    const d = localStorage.getItem('spaartool-v1');
+    if (d) state = JSON.parse(d);
+  } catch(e) {}
+  document.getElementById('t-date').value = today();
+  render();
+}
+
+function fmt(n) {
+  return '€\u202f' + Number(n).toLocaleString('nl-BE', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function today() { return new Date().toISOString().slice(0,10); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id, e) {
+  if (e && e.target !== document.getElementById(id)) return;
+  document.getElementById(id).classList.add('hidden');
+}
+
+function showPage(p, btn) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+function totals() {
+  const inc = state.transactions.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+  const exp = state.transactions.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+  const saved = state.goals.reduce((s,g) => s+g.saved, 0);
+  return { inc, exp, bal: inc-exp, saved };
+}
+
+function addGoal() {
+  const name = document.getElementById('g-name').value.trim();
+  const target = parseFloat(document.getElementById('g-target').value);
+  const saved = parseFloat(document.getElementById('g-saved').value) || 0;
+  const date = document.getElementById('g-date').value;
+  if (!name || !target || target <= 0) { toast('Vul naam en doelbedrag in'); return; }
+  state.goals.push({ id: uid(), name, target, saved: Math.min(saved, target), date });
+  ['g-name','g-target','g-saved','g-date'].forEach(id => document.getElementById(id).value = '');
+  closeModal('modal-goal');
+  save(); render(); toast('Doel toegevoegd ✓');
+}
+
+function openDeposit(id) {
+  document.getElementById('deposit-id').value = id;
+  document.getElementById('deposit-amount').value = '';
+  openModal('modal-deposit');
+}
+function confirmDeposit() {
+  const id = document.getElementById('deposit-id').value;
+  const amt = parseFloat(document.getElementById('deposit-amount').value);
+  if (!amt || amt <= 0) { toast('Voer een geldig bedrag in'); return; }
+  const g = state.goals.find(x => x.id === id);
+  if (g) { g.saved = Math.min(g.target, +(g.saved + amt).toFixed(2)); }
+  closeModal('modal-deposit');
+  save(); render(); toast('Gestort ✓');
+}
+
+function deleteGoal(id) {
+  if (!confirm('Doel verwijderen?')) return;
+  state.goals = state.goals.filter(x => x.id !== id);
+  save(); render(); toast('Doel verwijderd');
+}
+
+function addTransaction() {
+  const desc = document.getElementById('t-desc').value.trim();
+  const amount = parseFloat(document.getElementById('t-amount').value);
+  const type = document.getElementById('t-type').value;
+  const cat = document.getElementById('t-cat').value;
+  const date = document.getElementById('t-date').value || today();
+  if (!desc || !amount || amount <= 0) { toast('Vul omschrijving en bedrag in'); return; }
+  state.transactions.unshift({ id: uid(), desc, amount: +amount.toFixed(2), type, cat, date });
+  ['t-desc','t-amount'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('t-date').value = today();
+  closeModal('modal-tx');
+  save(); render(); toast('Transactie toegevoegd ✓');
+}
+
+function deleteTx(id) {
+  if (!confirm('Transactie verwijderen?')) return;
+  state.transactions = state.transactions.filter(x => x.id !== id);
+  save(); render(); toast('Verwijderd');
+}
+
+function goalHTML(g, showActions = true) {
+  const pct = g.target > 0 ? Math.min(100, Math.round(g.saved / g.target * 100)) : 0;
+  const done = pct >= 100;
+  const dl = g.date ? `<div class="goal-deadline">📅 Deadline: ${fmtDate(g.date)}</div>` : '';
+  const actions = showActions ? `<div class="goal-actions">
+    <button class="btn btn-sm" onclick="openDeposit('${g.id}')">+ Storten</button>
+    <button class="btn btn-sm btn-danger" onclick="deleteGoal('${g.id}')">Verwijder</button>
+  </div>` : '';
+  return `<div class="goal-row">
+    <div class="goal-top">
+      <span class="goal-name">${done ? '✅ ' : ''}${g.name}</span>
+      <span class="goal-pct">${pct}%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar${done?' done':''}" style="width:${pct}%"></div></div>
+    <div class="goal-amounts">${fmt(g.saved)} van ${fmt(g.target)}</div>
+    ${dl}${actions}
+  </div>`;
+}
+
+function txHTML(tx, showDelete = false) {
+  const icon = CAT_ICONS[tx.cat] || '📦';
+  const del = showDelete ? `<button class="btn btn-sm" style="border:none;background:none;color:var(--text-tertiary);font-size:18px;padding:0 4px;" onclick="deleteTx('${tx.id}')">×</button>` : '';
+  return `<div class="tx-row">
+    <div class="tx-icon ${tx.type}">${icon}</div>
+    <div class="tx-info">
+      <div class="tx-desc">${tx.desc}</div>
+      <div class="tx-sub"><span class="badge badge-${tx.type}">${tx.type==='income'?'Inkomst':'Uitgave'}</span> · ${tx.cat}</div>
+    </div>
+    <div class="tx-right">
+      <div class="tx-amount ${tx.type}">${tx.type==='income'?'+':'-'}${fmt(tx.amount)}</div>
+      <div class="tx-date">${fmtDate(tx.date)}</div>
+    </div>
+    ${del}
+  </div>`;
+}
+
+function render() {
+  const t = totals();
+
+  // Metrics
+  const el = document.getElementById('metrics');
+  if (el) el.innerHTML = `
+    <div class="metric metric-main">
+      <div class="metric-label">Huidig saldo</div>
+      <div class="metric-value">${fmt(t.bal)}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Inkomsten</div>
+      <div class="metric-value" style="color:var(--green)">${fmt(t.inc)}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Uitgaven</div>
+      <div class="metric-value" style="color:var(--red)">${fmt(t.exp)}</div>
+    </div>
+    <div class="metric" style="grid-column:1/-1">
+      <div class="metric-label">Totaal gespaard</div>
+      <div class="metric-value" style="color:var(--green)">${fmt(t.saved)}</div>
+    </div>
+  `;
+
+  // Dash goals
+  const dg = document.getElementById('dash-goals');
+  if (dg) dg.innerHTML = state.goals.length
+    ? state.goals.map(g => goalHTML(g, false)).join('')
+    : `<div class="empty"><div class="empty-icon">🎯</div>Nog geen spaardoelen</div>`;
+
+  // Dash tx
+  const dtx = document.getElementById('dash-tx');
+  if (dtx) {
+    const recent = state.transactions.slice(0, 5);
+    dtx.innerHTML = recent.length
+      ? recent.map(tx => txHTML(tx, false)).join('')
+      : `<div class="empty"><div class="empty-icon">💸</div>Nog geen transacties</div>`;
+  }
+
+  // Goals page
+  const gl = document.getElementById('goals-list');
+  if (gl) gl.innerHTML = state.goals.length
+    ? state.goals.map(g => goalHTML(g, true)).join('')
+    : `<div class="empty"><div class="empty-icon">🎯</div>Nog geen spaardoelen.<br>Tik op "+ Nieuw doel" om te beginnen.</div>`;
+
+  // Tx page
+  const tl = document.getElementById('tx-list');
+  if (tl) tl.innerHTML = state.transactions.length
+    ? state.transactions.map(tx => txHTML(tx, true)).join('')
+    : `<div class="empty"><div class="empty-icon">💸</div>Nog geen transacties</div>`;
+
+  // Stats
+  const sm = document.getElementById('stats-month');
+  if (sm) {
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const mTx = state.transactions.filter(tx => tx.date && tx.date.startsWith(ym));
+    const mInc = mTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const mExp = mTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    sm.innerHTML = `
+      <div class="tx-row" style="justify-content:space-between">
+        <span style="color:var(--text-secondary);font-size:14px">Inkomsten</span>
+        <span class="tx-amount income">+${fmt(mInc)}</span>
+      </div>
+      <div class="tx-row" style="justify-content:space-between">
+        <span style="color:var(--text-secondary);font-size:14px">Uitgaven</span>
+        <span class="tx-amount expense">-${fmt(mExp)}</span>
+      </div>
+      <div class="tx-row" style="justify-content:space-between;border-bottom:none">
+        <span style="font-weight:600;font-size:14px">Netto</span>
+        <span class="tx-amount ${mInc-mExp>=0?'income':'expense'}">${mInc-mExp>=0?'+':''}${fmt(mInc-mExp)}</span>
+      </div>`;
+  }
+
+  const sc = document.getElementById('stats-cats');
+  if (sc) {
+    const expenses = state.transactions.filter(t => t.type === 'expense');
+    const totExp = expenses.reduce((s,t)=>s+t.amount,0);
+    const cats = {};
+    expenses.forEach(t => { cats[t.cat] = (cats[t.cat]||0) + t.amount; });
+    const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+    if (!sorted.length) {
+      sc.innerHTML = `<div class="empty"><div class="empty-icon">📊</div>Nog geen uitgaven</div>`;
+    } else {
+      sc.innerHTML = sorted.map(([cat, amt]) => {
+        const pct = totExp > 0 ? Math.round(amt/totExp*100) : 0;
+        return `<div class="goal-row">
+          <div class="goal-top">
+            <span style="font-weight:500">${CAT_ICONS[cat]||'📦'} ${cat}</span>
+            <span style="font-size:13px;color:var(--text-secondary)">${pct}% · ${fmt(amt)}</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%;background:var(--red)"></div></div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+load();
+</script>
+</body>
+</html>
